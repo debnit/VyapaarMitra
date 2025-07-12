@@ -19,6 +19,9 @@ const dashboardRoutes = require('./routes/dashboard');
 const { connectDB } = require('./config/database');
 const { connectRedis } = require('./config/redis');
 
+// Domain middleware
+const { domainHandler, wwwRedirect, httpsRedirect } = require('./middleware/domain');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -44,9 +47,36 @@ const limiter = rateLimit({
 });
 
 // Middleware
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+      fontSrc: ["'self'", "fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "wss:", "https:"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+app.use(cors({
+  origin: [
+    'https://vyapaarmitra.in',
+    'https://www.vyapaarmitra.in',
+    'http://localhost:3000',
+    'https://*.replit.dev',
+    'https://*.replit.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
+}));
+
 app.use(limiter);
+app.use(httpsRedirect);
+app.use(wwwRedirect);
+app.use(domainHandler);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -55,9 +85,16 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    service: 'VyapaarMitra API'
+    service: 'VyapaarMitra API',
+    domain: process.env.DOMAIN || 'vyapaarmitra.in',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
+
+// Domain-specific routes
+const domainRoutes = require('./routes/domain');
+app.use('/', domainRoutes);
 
 // API Routes
 app.use('/api/auth', authRoutes);
