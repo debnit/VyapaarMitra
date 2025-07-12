@@ -118,16 +118,36 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
+// Production optimizations
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+  app.use(compression({ level: 6 }));
+}
+
 const startServer = async () => {
   try {
     // Connect to databases
     await connectDB();
     await connectRedis();
     
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`VyapaarMitra server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`);
     });
+
+    // Graceful shutdown handling
+    const gracefulShutdown = () => {
+      logger.info('Received shutdown signal, closing server gracefully...');
+      server.close(() => {
+        logger.info('Server closed successfully');
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGINT', gracefulShutdown);
+
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);
