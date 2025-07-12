@@ -25,11 +25,12 @@ const connectDB = async () => {
     return true;
   } catch (error) {
     logger.error('Database connection error:', error);
-    // Don't exit in production, allow app to start without DB for health checks
-    if (process.env.NODE_ENV !== 'production') {
-      process.exit(1);
+    // In production deployments, continue without DB for health checks
+    if (process.env.NODE_ENV === 'production') {
+      logger.warn('Continuing without database connection in production');
+      return false;
     }
-    return false;
+    process.exit(1);
   }
 };
 
