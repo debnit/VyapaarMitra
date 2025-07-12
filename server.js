@@ -61,7 +61,11 @@ app.use('/api/auth/', authLimiter);
 app.use(compression());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://vyapaarmitra.com', 'https://www.vyapaarmitra.com']
+    ? [
+        'https://vyapaarmitra.com', 
+        'https://www.vyapaarmitra.com',
+        `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+      ]
     : ['http://localhost:3000', 'http://127.0.0.1:3000'],
   credentials: true
 }));
