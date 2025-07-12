@@ -2,11 +2,12 @@
 channel = "stable-24_05"
 
 [workflows]
+runButton = "Development Setup"
 
 [[workflows.workflow]]
 name = "Development Setup"
 author = 44947373
-mode = "sequential"
+mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
