@@ -145,6 +145,6 @@ task = "shell.exec"
 args = "cd frontend && npm install"
 
 [deployment]
-run = ["sh", "-c", "node server.js"]
-build = ["sh", "-c", "npm install && cd frontend && npm install && npm run build"]
+run = ["node", "server.js"]
+build = ["npm", "install", "&&", "cd", "frontend", "&&", "npm", "install", "&&", "npm", "run", "build"]
 deploymentTarget = "cloudrun"
