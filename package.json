@@ -25,7 +25,7 @@
     "redis": "^4.6.8",
     "nodemailer": "^6.9.4",
     "razorpay": "^2.9.2",
-    "multer": "^1.4.4",
+    "multer": "1.4.4",
     "winston": "^3.10.0",
     "uuid": "^9.0.0",
     "dotenv": "^16.3.1"
