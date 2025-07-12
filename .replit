@@ -2,7 +2,7 @@
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Development"
+runButton = "Start Production"
 
 [[workflows.workflow]]
 name = "Development Setup"
@@ -83,6 +83,41 @@ args = "cd .."
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm test"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start"
+
+[[workflows.workflow]]
+name = "Install Dependencies"
+author = 44947373
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && npm install"
+
+[[workflows.workflow]]
+name = "Build Production"
+author = 44947373
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && npm install && npm run build"
+
+[[workflows.workflow]]
+name = "Start Production"
+author = 44947373
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
