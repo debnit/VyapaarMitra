@@ -164,6 +164,75 @@ const createTables = async () => {
       )
     `);
 
+    // Valuations table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS valuations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        msme_id UUID REFERENCES msme_profiles(id) ON DELETE CASCADE,
+        base_valuation DECIMAL(20,2) NOT NULL,
+        adjusted_valuation DECIMAL(20,2) NOT NULL,
+        scores JSONB NOT NULL,
+        weighted_score DECIMAL(5,2) NOT NULL,
+        multiplier DECIMAL(5,2) NOT NULL,
+        calculated_at TIMESTAMP NOT NULL,
+        valid_until TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(msme_id)
+      )
+    `);
+
+    // Escrow accounts table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS escrow_accounts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        account_number VARCHAR(20) UNIQUE NOT NULL,
+        buyer_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        seller_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        amount DECIMAL(15,2) NOT NULL,
+        deposited_amount DECIMAL(15,2) DEFAULT 0,
+        escrow_fee DECIMAL(10,2) DEFAULT 0,
+        transaction_type VARCHAR(100) NOT NULL,
+        status VARCHAR(50) DEFAULT 'created' 
+          CHECK (status IN ('created', 'funded', 'released', 'refunded', 'in_dispute', 'expired')),
+        dispute_raised_by UUID REFERENCES users(id),
+        dispute_reason TEXT,
+        released_by UUID REFERENCES users(id),
+        refunded_by UUID REFERENCES users(id),
+        released_at TIMESTAMP,
+        refunded_at TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Escrow transactions table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS escrow_transactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        escrow_id UUID REFERENCES escrow_accounts(id) ON DELETE CASCADE,
+        transaction_type VARCHAR(50) NOT NULL 
+          CHECK (transaction_type IN ('creation', 'deposit', 'release', 'refund', 'dispute', 'fee')),
+        amount DECIMAL(15,2) DEFAULT 0,
+        fee DECIMAL(10,2) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'pending' 
+          CHECK (status IN ('pending', 'completed', 'failed')),
+        created_by UUID REFERENCES users(id),
+        description TEXT,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create indexes for performance
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_valuations_msme_id ON valuations(msme_id);
+      CREATE INDEX IF NOT EXISTS idx_valuations_valid_until ON valuations(valid_until);
+      CREATE INDEX IF NOT EXISTS idx_escrow_accounts_status ON escrow_accounts(status);
+      CREATE INDEX IF NOT EXISTS idx_escrow_accounts_expires_at ON escrow_accounts(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_escrow_transactions_escrow_id ON escrow_transactions(escrow_id);
+    `);
+
     logger.info('Database tables created successfully');
   } catch (error) {
     logger.error('Error creating tables:', error);

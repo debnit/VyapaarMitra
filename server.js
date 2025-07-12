@@ -3,33 +3,18 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const winston = require('winston');
 const compression = require('compression');
-const morgan = require('morgan');
-require('dotenv').config();
-
-// Route imports
-const authRoutes = require('./routes/auth');
-const msmeBazaarRoutes = require('./routes/msmeBazaar');
-const navarambhRoutes = require('./routes/navarambh');
-const agentHubRoutes = require('./routes/agentHub');
-const complianceRoutes = require('./routes/compliance');
-const loanRoutes = require('./routes/loans');
-const procurementRoutes = require('./routes/procurement');
-const dashboardRoutes = require('./routes/dashboard');
-
-// Database connection
+const path = require('path');
+const winston = require('winston');
 const { connectDB } = require('./config/database');
 const { connectRedis } = require('./config/redis');
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Logger setup
+// Initialize logger
 const logger = winston.createLogger({
-  level: 'info',
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: winston.format.combine(
     winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
     winston.format.json()
   ),
   transports: [
@@ -39,48 +24,91 @@ const logger = winston.createLogger({
   ]
 });
 
+const app = express();
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+}));
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
+app.use('/api/', limiter);
 
-// Middleware
-app.use(helmet());
-app.use(cors());
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+});
+app.use('/api/auth/', authLimiter);
+
+// Basic middleware
 app.use(compression());
-app.use(morgan('combined'));
-app.use(limiter);
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://vyapaarmitra.com', 'https://www.vyapaarmitra.com']
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Static file serving
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    service: 'VyapaarMitra API'
+    version: process.env.npm_package_version || '1.0.0'
   });
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/msme-bazaar', msmeBazaarRoutes);
-app.use('/api/navarambh', navarambhRoutes);
-app.use('/api/agent-hub', agentHubRoutes);
-app.use('/api/compliance', complianceRoutes);
-app.use('/api/loans', loanRoutes);
-app.use('/api/procurement', procurementRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/msme-bazaar', require('./routes/msmeBazaar'));
+app.use('/api/loans', require('./routes/loans'));
+app.use('/api/procurement', require('./routes/procurement'));
+app.use('/api/compliance', require('./routes/compliance'));
+app.use('/api/navarambh', require('./routes/navarambh'));
+app.use('/api/agent-hub', require('./routes/agentHub'));
+app.use('/api/domain', require('./routes/domain'));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  logger.error(err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+// Serve React app in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'frontend/build')));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
   });
+}
+
+// Global error handler
+app.use((err, req, res, next) => {
+  logger.error('Unhandled error:', err);
+  
+  if (process.env.NODE_ENV === 'production') {
+    res.status(500).json({ error: 'Internal server error' });
+  } else {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
 });
 
 // 404 handler
@@ -88,22 +116,33 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Initialize database connections and start server
-async function startServer() {
+const PORT = process.env.PORT || 5000;
+
+const startServer = async () => {
   try {
+    // Connect to databases
     await connectDB();
     await connectRedis();
     
     app.listen(PORT, '0.0.0.0', () => {
       logger.info(`VyapaarMitra server running on port ${PORT}`);
-      console.log(`Server running on http://0.0.0.0:${PORT}`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);
   }
-}
+};
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
 
 startServer();
-
-module.exports = app;

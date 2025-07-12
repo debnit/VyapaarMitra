@@ -2,7 +2,7 @@
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Development Setup"
+runButton = "Development"
 
 [[workflows.workflow]]
 name = "Development Setup"
@@ -20,3 +20,45 @@ args = "./scripts/setup.sh"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm install"
+
+[[workflows.workflow]]
+name = "Production Setup"
+author = 44947373
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "chmod +x scripts/setup.sh"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./scripts/setup.sh"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && npm install && npm run build"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd .."
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node server.js"
+
+[[workflows.workflow]]
+name = "Development"
+author = 44947373
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && npm start"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
