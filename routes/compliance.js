@@ -198,37 +198,3 @@ router.get('/types', async (req, res) => {
 });
 
 module.exports = router;
-const express = require('express');
-const joi = require('joi');
-const { pool } = require('../config/database');
-const { authenticateToken, authorizeRoles } = require('../middleware/auth');
-const router = express.Router();
-
-router.use(authenticateToken);
-
-// Get compliance status
-router.get('/status', authorizeRoles('msme_owner'), async (req, res) => {
-  try {
-    const msmeProfile = await pool.query(
-      'SELECT id FROM msme_profiles WHERE user_id = $1',
-      [req.user.id]
-    );
-
-    if (msmeProfile.rows.length === 0) {
-      return res.status(404).json({ error: 'MSME profile not found' });
-    }
-
-    const compliance = await pool.query(`
-      SELECT * FROM compliance_tracking 
-      WHERE msme_id = $1 
-      ORDER BY created_at DESC
-    `, [msmeProfile.rows[0].id]);
-
-    res.json({ compliance: compliance.rows });
-  } catch (error) {
-    console.error('Compliance fetch error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-module.exports = router;
