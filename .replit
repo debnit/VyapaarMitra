@@ -1,2 +1,25 @@
+
+modules = ["nodejs-20"]
+
 [nix]
 channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "node server.js"]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[workflows]
+runButton = "Run VyapaarMitra"
+
+[[workflows.workflow]]
+name = "Run VyapaarMitra"
+author = 44947373
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node server.js"
