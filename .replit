@@ -23,8 +23,52 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && npm start"
+args = "nix-shell --run \"cd frontend && npm start\""
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node server.js"
+args = "nix-shell --run \"node server.js\""
+
+[[workflows.workflow]]
+name = "Start Backend"
+author = 44947373
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "nix-shell --run \"node server.js\""
+
+[[workflows.workflow]]
+name = "Install Dependencies"
+author = 44947373
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "nix-shell --run \"npm install\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "nix-shell --run \"cd frontend && npm install\""
+
+[[workflows.workflow]]
+name = "Start Frontend"
+author = 44947373
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "nix-shell --run \"cd frontend && npm start\""
+
+[[workflows.workflow]]
+name = "Install Dependencies"
+author = 44947373
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "nix-shell --run \"npm install\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "nix-shell --run \"cd frontend && npm install\""
