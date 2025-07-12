@@ -146,4 +146,4 @@ args = "cd frontend && npm install"
 
 [deployment]
 run = ["sh", "-c", "npm start"]
-build = ["sh", "-c", "npm install && cd frontend && npm install && npm run build"]
+build = ["sh", "-c", "./scripts/clean-deploy.sh"]
