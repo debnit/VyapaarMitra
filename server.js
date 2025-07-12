@@ -132,8 +132,9 @@ const startServer = async () => {
     
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`VyapaarMitra server running on port ${PORT}`);
-      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'production'}`);
       logger.info(`Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`);
+      logger.info(`Server accessible at: https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
     });
 
     // Graceful shutdown handling
