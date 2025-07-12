@@ -1,2 +1,21 @@
 [nix]
 channel = "stable-24_05"
+
+[workflows]
+
+[[workflows.workflow]]
+name = "Development Setup"
+author = 44947373
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "chmod +x scripts/setup.sh"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./scripts/setup.sh"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
